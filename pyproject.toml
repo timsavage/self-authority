@@ -9,6 +9,8 @@ python = "^3.10"
 textual = "^0.4.0"
 cryptography = "^38.0.3"
 pyapp = "^4.10.1"
+bcrypt = "^4.0.1"
+aiofile = "^3.8.1"
 
 [tool.poetry.dev-dependencies]
 textual = {extras = ["dev"], version = "^0.4.0"}
