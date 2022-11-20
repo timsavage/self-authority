@@ -3,7 +3,7 @@
 A simple tool for managing your own Certificate Authority.
 
 The primary use-case is for assigning certificates to services around your home 
-or small office lab that does not require a publicly signed certificate.
+or small office lab that do not require publicly signed certificates.
 
 ## Install
 
@@ -21,6 +21,11 @@ or small office lab that does not require a publicly signed certificate.
   ```
 
 ## Usage
+
+Activate poetry:
+```shell
+> poetry shell
+```
 
 Initialise your certificate authority:
 ```shell
