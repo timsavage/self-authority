@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "self-authority"
+version = "0.1.0"
+description = "Simple self managed Certificate Authority"
+authors = ["Tim Savage <tim@savage.company>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+textual = "^0.4.0"
+cryptography = "^38.0.3"
+pyapp = "^4.10.1"
+
+[tool.poetry.dev-dependencies]
+textual = {extras = ["dev"], version = "^0.4.0"}
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
