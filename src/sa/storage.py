@@ -2,6 +2,7 @@
 import abc
 from pathlib import Path
 
+from aiofile import async_open
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -23,29 +24,31 @@ class Storage:
         """List all certificates in storage."""
 
     @abc.abstractmethod
-    def read_private_key(self, domain: str, passphrase: str) -> rsa.RSAPrivateKey:
+    async def read_private_key(
+        self, domain: str, passphrase: str | None
+    ) -> rsa.RSAPrivateKey:
         """Read private key from storage."""
 
     @abc.abstractmethod
-    def write_private_key(
-        self, key: rsa.RSAPrivateKey, domain: str, passphrase: str
+    async def write_private_key(
+        self, key: rsa.RSAPrivateKey, domain: str, passphrase: str | None
     ) -> None:
         """Write private key to storage."""
 
     @abc.abstractmethod
-    def read_csr(self, domain: str) -> x509.CertificateSigningRequest:
+    async def read_csr(self, domain: str) -> x509.CertificateSigningRequest:
         """Read a CSR from storage."""
 
     @abc.abstractmethod
-    def write_csr(self, csr: x509.CertificateSigningRequest, domain: str):
+    async def write_csr(self, csr: x509.CertificateSigningRequest, domain: str):
         """Write a CSR to storage."""
 
     @abc.abstractmethod
-    def read_certificate(self, domain: str) -> x509.Certificate:
+    async def read_certificate(self, domain: str) -> x509.Certificate:
         """Read a certificate from storage."""
 
     @abc.abstractmethod
-    def write_certificate(self, cert: x509.Certificate, domain: str):
+    async def write_certificate(self, cert: x509.Certificate, domain: str):
         """Write a certificate to storage."""
 
 
@@ -83,14 +86,14 @@ class FileSystem(Storage):
         else:
             return serialization.NoEncryption()
 
-    def write_private_key(
+    async def write_private_key(
         self, key: rsa.RSAPrivateKey, domain: str, passphrase: str | None
     ) -> None:
         """Write private key to storage."""
         file_path = self._file_path(domain, PRIVATE_KEY_FILE)
 
-        with file_path.open(mode="wb") as fp:
-            fp.write(
+        async with async_open(file_path, mode="wb") as fp:
+            await fp.write(
                 key.private_bytes(
                     encoding=serialization.Encoding.PEM,
                     format=serialization.PrivateFormat.OpenSSH,
@@ -98,38 +101,40 @@ class FileSystem(Storage):
                 )
             )
 
-    def read_private_key(self, domain: str, passphrase: str) -> rsa.RSAPrivateKey:
+    async def read_private_key(
+        self, domain: str, passphrase: str | None
+    ) -> rsa.RSAPrivateKey:
         """Read private key from storage."""
         file_path = self._file_path(domain, PRIVATE_KEY_FILE)
-        with file_path.open(mode="rb") as fp:
+        async with async_open(file_path, mode="rb") as fp:
             key = serialization.load_pem_private_key(
-                fp.read(),
+                await fp.read(),
                 passphrase.encode(TEXT_ENCODING) if passphrase else None,
             )
         if isinstance(key, rsa.RSAPrivateKey):
             return key
         raise TypeError(f"Key loaded is {type(key).__name__} expected an RSAPrivateKey")
 
-    def read_csr(self, domain: str) -> x509.CertificateSigningRequest:
+    async def read_csr(self, domain: str) -> x509.CertificateSigningRequest:
         """Read a CSR from storage."""
         file_path = self._file_path(domain, SIGNING_REQUEST_FILE)
-        with file_path.open(mode="rb") as fp:
-            return x509.load_pem_x509_csr(fp.read())
+        async with async_open(file_path, mode="rb") as fp:
+            return x509.load_pem_x509_csr(await fp.read())
 
-    def write_csr(self, csr: x509.CertificateSigningRequest, domain: str):
+    async def write_csr(self, csr: x509.CertificateSigningRequest, domain: str):
         """Write a CSR to storage."""
         file_path = self._file_path(domain, SIGNING_REQUEST_FILE)
-        with file_path.open(mode="wb") as fp:
-            fp.write(csr.public_bytes(serialization.Encoding.PEM))
+        async with async_open(file_path, mode="wb") as fp:
+            await fp.write(csr.public_bytes(serialization.Encoding.PEM))
 
-    def read_certificate(self, domain: str) -> x509.Certificate:
+    async def read_certificate(self, domain: str) -> x509.Certificate:
         """Read a certificate from storage."""
         file_path = self._file_path(domain, CERTIFICATE_FILE)
-        with file_path.open(mode="rb") as fp:
-            return x509.load_pem_x509_certificate(fp.read())
+        async with async_open(file_path, mode="rb") as fp:
+            return x509.load_pem_x509_certificate(await fp.read())
 
-    def write_certificate(self, cert: x509.Certificate, domain: str):
+    async def write_certificate(self, cert: x509.Certificate, domain: str):
         """Write a certificate to storage."""
         file_path = self._file_path(domain, CERTIFICATE_FILE)
-        with file_path.open(mode="wb") as fp:
-            fp.write(cert.public_bytes(serialization.Encoding.PEM))
+        async with async_open(file_path, mode="wb") as fp:
+            await fp.write(cert.public_bytes(serialization.Encoding.PEM))
