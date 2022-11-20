@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from sa.consts import (
-    CA_DOMAIN_FOLDER,
+    CA_DOMAIN,
     PRIVATE_KEY_FILE,
     TEXT_ENCODING,
     SIGNING_REQUEST_FILE,
@@ -65,7 +65,7 @@ class FileSystem(Storage):
         return [
             path.name
             for path in self.root.glob(pattern)
-            if path.is_dir() and path.name != CA_DOMAIN_FOLDER
+            if path.is_dir() and path.name != CA_DOMAIN
         ]
 
     def _file_path(self, domain: str, file_name: str):
@@ -96,7 +96,7 @@ class FileSystem(Storage):
             await fp.write(
                 key.private_bytes(
                     encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.OpenSSH,
+                    format=serialization.PrivateFormat.TraditionalOpenSSL,
                     encryption_algorithm=self._get_encryption(passphrase),
                 )
             )

@@ -19,7 +19,9 @@ DEFAULT_DOMAIN_VALID_RANGE: Final[timedelta] = timedelta(days=365)
 CA_CONFIG_FILE: Final[str] = ".ca-config.toml"
 """Config file for the CA."""
 
-CA_DOMAIN_FOLDER: Final[str] = ".ca"
+CA_DOMAIN: Final[str] = ".ca"
+"""Domain for the CA."""
+
 PRIVATE_KEY_FILE: Final[str] = "private.key.pem"
 SIGNING_REQUEST_FILE: Final[str] = "signing-request.csr.pem"
 SIGNING_EXTENSION_FILE: Final[str] = "signing-request.ext"
