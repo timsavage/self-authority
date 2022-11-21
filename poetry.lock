@@ -227,6 +227,21 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "odin"
+version = "2.0"
+description = "Data-structure definition/validation/traversal, mapping and serialisation toolkit for Python"
+category = "main"
+optional = false
+python-versions = ">=3.8,<4.0"
+
+[package.extras]
+arrow = ["arrow"]
+msgpack = ["msgpack"]
+pint = ["pint"]
+yaml = ["pyyaml"]
+toml = ["toml"]
+
+[[package]]
 name = "pyapp"
 version = "4.10.1"
 description = "A Python application framework - Let us handle the boring stuff!"
@@ -279,7 +294,7 @@ jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
 
 [[package]]
 name = "textual"
-version = "0.4.0"
+version = "0.5.0"
 description = "Modern Text User Interface framework"
 category = "main"
 optional = false
@@ -323,7 +338,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "flake8 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "1556f1fd90a958a91ece92d61136675288cc17465b9463af776c398bb95c6310"
+content-hash = "adcfb8fb7ae060e1653a3467431bdd9a0d979850549c4d804a4d0b24e0b3cda9"
 
 [metadata.files]
 aiofile = []
@@ -349,6 +364,7 @@ importlib-metadata = []
 msgpack = []
 multidict = []
 nanoid = []
+odin = []
 pyapp = []
 pycparser = [
     {file = "pycparser-2.21-py2.py3-none-any.whl", hash = "sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9"},

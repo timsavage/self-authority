@@ -29,15 +29,22 @@ Activate poetry:
 
 Initialise your certificate authority:
 ```shell
-> python -m sa.cli ca init .
+> sa ca init .
 ```
 
 Create a domain name and have it signed:
 ```shell
-> python -m sa.cli domain add
+> sa domain add
 ```
 
 Renew a certificate for a domain name
 ```shell
-> python -m sa.cli domain renew MY_DOMAIN
+> sa domain renew MY_DOMAIN
 ```
+
+> **Note**
+> 
+> Help is a always available using `--help` and for any sub command. 
+> ```shell
+> > sa --help
+> ```
