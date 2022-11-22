@@ -3,41 +3,58 @@ from pathlib import Path
 from typing import Optional
 
 from pyapp.app import CliApplication, Arg
+from rich import print
+from rich.prompt import Prompt
 
-from sa import authority
-from sa.consts import CA_DOMAIN
-from sa.models import CreateCA, CreateDomain
-from sa.storage import FileSystem
+from .resource_input import ResourceInput
+from ..models import CreateCA, CreateDomain
+from ..storage import FileSystemStorage
+from ..repository import CertificateRepository
 
-APP = CliApplication()
+APP = CliApplication(description="Your Personal Certificate Authority")
+main = APP.dispatch
 
 
 class Authority:
-    group = APP.create_command_group("authority", aliases=("ca",))
+    group = APP.create_command_group(
+        "authority",
+        aliases=("ca",),
+        help_text="Authority commands",
+    )
 
     @staticmethod
     @group.command(name="init")
     async def init_authority(
-        root: Path = Arg(default=Path(), help="Root path of authority storage"),
+        root: Optional[Path] = Arg(
+            default=Path("."),
+            help="Root path of authority storage",
+        ),
         *,
+        force: bool = Arg(
+            default=False,
+            help="Overwrite any existing repository data",
+        ),
         key_size: int = Arg(
-            default=4096, help="Size of private key; defaults to 4096 bit"
+            default=4096,
+            help="Size of private key; defaults to 4096 bit",
         ),
     ):
         """Initialise a certificate authority."""
-        ca = CreateCA(
-            name=input("CA name:"),
-            country_name=input("Country Name [AU]:") or "AU",
-            state_or_province=input("State or Province [NSW]:") or "NSW",
-            locality=input("Locality []:") or "",
-            org_name=input("Org name []:") or "",
-            org_unit_name=input("Org unit name []:") or "",
-            email_address=input("Email address []:") or "",
-        )
-        passphrase = getpass("Pass-phrase:")
 
-        storage = FileSystem(root)
-        await authority.create_ca(ca, passphrase, storage, key_size=key_size)
+        ca = ResourceInput[CreateCA](CreateCA).input()
+
+        passphrase = None
+        while passphrase is None:
+            phrase = Prompt.ask("Passphrase", password=True)
+            check = Prompt.ask("Confirm Passphrase", password=True)
+            if phrase != check:
+                print("[red]Confirmation doesn't match[/red]")
+            else:
+                passphrase = phrase
+
+        await CertificateRepository.create_selfsigned(
+            ca, passphrase, FileSystemStorage(root), exist_ok=force, key_size=key_size
+        )
 
     @staticmethod
     @group.command(name="root")
@@ -48,8 +65,8 @@ class Authority:
         """Export the root certificate."""
         from cryptography.hazmat.primitives import serialization
 
-        storage = FileSystem(root)
-        certificate = await storage.read_certificate(CA_DOMAIN)
+        repo = await CertificateRepository.from_url(root)
+        certificate = await repo.ca_certificate()
         print(certificate.public_bytes(serialization.Encoding.PEM).decode("ascii"))
 
 
@@ -60,18 +77,15 @@ class Domains:
 
     @staticmethod
     @group.command(aliases=("ls",))
-    def list(
+    async def list(
         query: Optional[str] = Arg(default="*"),
         *,
         root: Path = Arg(default=Path(), help="Root path of authority storage"),
     ):
         """List all managed certificates"""
-        storage = FileSystem(root)
-        domains = storage.list_domains(query)
-        if domains:
-            print("\n".join(f"- {name}" for name in domains))
-        else:
-            print("None!")
+        repo = await CertificateRepository.from_url(root)
+        domains = await repo.list_domains(query)
+        print("\n".join(f"- {name}" for name in domains) if domains else "None!")
 
     @staticmethod
     @group.command(name="add", help_text="Add a domain")
@@ -79,25 +93,29 @@ class Domains:
         *,
         root: Path = Arg(default=Path(), help="Root path of authority storage"),
     ):
-        domain = CreateDomain(
-            domain_name=input("Domain name:"),
-            alt_names=None,
-            country_name=input("Country Name [AU]:") or "AU",
-            state_or_province=input("State or Province [NSW]:") or "NSW",
-            locality=input("Locality []:") or "",
-            org_name=input("Org name []:") or "",
-            org_unit_name=input("Org unit name []:") or "",
-            email_address=input("Email address []:") or "",
-        )
+        create_domain = ResourceInput[CreateDomain](CreateDomain).input()
         ca_passphrase = getpass("CA Passphrase:")
 
-        storage = FileSystem(root)
-        ca_certificate = await storage.read_certificate(CA_DOMAIN)
-        ca_private_key = await storage.read_private_key(CA_DOMAIN, ca_passphrase)
-        await authority.create_domain(domain, ca_certificate, ca_private_key, storage)
+        repo = await CertificateRepository.from_url(root)
+        async with repo.unlock(ca_passphrase):
+            domain = await repo.create_domain(create_domain)
+
+        print(domain)
 
     @staticmethod
-    @group.command(name="renew", help_text="Renew a domain")
+    @group.command(name="show", help_text="Show an existing domain")
+    async def show_domain(
+        domain_name: str,
+        *,
+        root: Path = Arg(default=Path(), help="Root path of authority storage"),
+    ):
+        repo = await CertificateRepository.from_url(root)
+        domain = await repo.get_domain(domain_name)
+
+        print(domain)
+
+    @staticmethod
+    @group.command(name="renew", help_text="Renew an existing domain")
     async def renew_domain(
         domain_name: str,
         *,
@@ -105,12 +123,12 @@ class Domains:
     ):
         ca_passphrase = getpass("CA Passphrase:")
 
-        storage = FileSystem(root)
-        ca_certificate = await storage.read_certificate(CA_DOMAIN)
-        ca_private_key = await storage.read_private_key(CA_DOMAIN, ca_passphrase)
-        await authority.renew_domain(
-            domain_name, ca_certificate, ca_private_key, storage
-        )
+        repo = await CertificateRepository.from_url(root)
+        domain = await repo.get_domain(domain_name)
+        async with repo.unlock(ca_passphrase):
+            await domain.renew()
+
+        print(domain)
 
     @staticmethod
     @group.command(name="export", help_text="Export certificate")
@@ -121,6 +139,9 @@ class Domains:
     ):
         from cryptography.hazmat.primitives import serialization
 
-        storage = FileSystem(root)
-        certificate = await storage.read_certificate(domain_name)
-        print(certificate.public_bytes(serialization.Encoding.PEM).decode("ascii"))
+        repo = await CertificateRepository.from_url(root)
+        domain = await repo.get_domain(domain_name)
+
+        print(
+            domain.certificate.public_bytes(serialization.Encoding.PEM).decode("ascii")
+        )
