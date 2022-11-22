@@ -2,6 +2,7 @@
 import logging
 from pathlib import Path
 
+import arrow
 from aiofile import async_open
 from .base import BytesIOStorage
 from ..consts import RESERVED_DOMAINS, REPO_DOMAIN, CONFIG_FILE
@@ -70,8 +71,16 @@ class FileSystemStorage(BytesIOStorage):
         async with async_open(file_path, mode="rb") as fp:
             return await fp.read()
 
-    async def _write_bytes(self, domain: str, file_name: str, data: bytes) -> int:
+    async def _write_bytes(
+        self, domain: str, file_name: str, data: bytes, *, backup: bool = False
+    ) -> int:
         """Write bytes to storage layer"""
         file_path = self._file_path(domain, file_name, parents=True)
+
+        if backup and file_path.exists():
+            backup_file_path = file_path.with_suffix(f"{arrow.utcnow().int_timestamp}")
+            file_path.replace(backup_file_path)
+            _LOGGER.info("Backup file written to %s", backup_file_path)
+
         async with async_open(file_path, mode="wb") as fp:
             return await fp.write(data)

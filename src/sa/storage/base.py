@@ -123,11 +123,14 @@ class Storage:
         self,
         domain: str,
         cert: x509.Certificate,
+        *,
+        backup: bool = True,
     ):
         """Write a certificate to storage.
 
         :param domain: Domain to write certificate to.
         :param cert: Certificate to write.
+        :param backup: Copy the existing certificate with a timestamp
         """
 
 
@@ -139,7 +142,9 @@ class BytesIOStorage(Storage):
         """Read bytes for storage layer"""
 
     @abc.abstractmethod
-    async def _write_bytes(self, domain: str, file_name: str, data: bytes) -> int:
+    async def _write_bytes(
+        self, domain: str, file_name: str, data: bytes, *, backup: bool = False
+    ) -> int:
         """Write bytes to storage layer"""
 
     async def read_config(self, domain: str) -> Mapping[str, ...]:
@@ -245,12 +250,15 @@ class BytesIOStorage(Storage):
         self,
         domain: str,
         cert: x509.Certificate,
+        *,
+        backup: bool = True,
     ):
         """Write a certificate to storage.
 
         :param domain: Domain to write certificate to.
         :param cert: Certificate to write.
+        :param backup: Copy the existing certificate with a timestamp
         """
         await self._write_bytes(
-            domain, CERTIFICATE_FILE, cert.public_bytes(Encoding.PEM)
+            domain, CERTIFICATE_FILE, cert.public_bytes(Encoding.PEM), backup=backup
         )
