@@ -1,26 +1,79 @@
-from typing import NamedTuple
+import odin
+from pyapp.conf import settings
 
 
-class CreateCA(NamedTuple):
+class CreateCA(odin.AnnotatedResource):
     """All fields required to create a new CA"""
 
-    name: str
-    country_name: str
-    state_or_province: str
-    locality: str
-    org_name: str
-    org_unit_name: str
-    email_address: str
+    name: str = odin.Options(
+        error_messages={"required": "Name is required"},
+        verbose_name="Name of CA",
+    )
+    country_name: str = odin.Options(
+        default=lambda: settings.DEFAULT_COUNTRY_NAME,
+        verbose_name="Country Name",
+    )
+    state_or_province: str = odin.Options(
+        default=lambda: settings.DEFAULT_STATE_OR_PROVINCE,
+        verbose_name="State or Province",
+    )
+    locality: str = odin.Options(
+        empty=True,
+        default="",
+        verbose_name="Locality",
+    )
+    org_name: str = odin.Options(
+        empty=True,
+        default=lambda: settings.DEFAULT_ORG_NAME,
+        verbose_name="Organisation Name",
+    )
+    org_unit_name: str = odin.Options(
+        empty=True,
+        default="",
+        verbose_name="Organisation Unit Name",
+    )
+    email_address: odin.types.Email = odin.Options(
+        empty=True,
+        default=lambda: settings.DEFAULT_EMAIL,
+        validators=[],
+        verbose_name="Email Address",
+    )
 
 
-class CreateDomain(NamedTuple):
+class CreateDomain(odin.AnnotatedResource):
     """All fields required to create a new domain"""
 
-    domain_name: str
-    alt_names: list[str] | None
-    country_name: str
-    state_or_province: str
-    locality: str
-    org_name: str
-    org_unit_name: str
-    email_address: str
+    name: str = odin.Options(
+        verbose_name="Name of CA",
+    )
+    alt_names: list[str] = odin.Options(
+        verbose_name="Alternative Names",
+    )
+    country_name: str = odin.Options(
+        empty=True,
+        verbose_name="Country Name",
+    )
+    state_or_province: str = odin.Options(
+        empty=True,
+        verbose_name="State or Province",
+    )
+    locality: str = odin.Options(
+        empty=True,
+        verbose_name="Locality",
+    )
+    org_name: str = odin.Options(
+        empty=True,
+        verbose_name="Organisation Name",
+    )
+    org_unit_name: str = odin.Options(
+        empty=True,
+        verbose_name="Organisation Unit Name",
+    )
+    email_address: odin.types.Email = odin.Options(
+        validators=[],
+        empty=True,
+        verbose_name="Email Address",
+    )
+
+    def __str__(self):
+        return self.name
