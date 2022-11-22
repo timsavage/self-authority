@@ -5,7 +5,7 @@ from pathlib import Path
 import arrow
 from aiofile import async_open
 from .base import BytesIOStorage
-from ..consts import RESERVED_DOMAINS, REPO_DOMAIN, CONFIG_FILE
+from ..consts import RESERVED_DOMAINS, CONFIG_FILE, CA_DOMAIN
 
 _LOGGER = logging.getLogger(__package__)
 
@@ -16,18 +16,18 @@ def locate_repository_root(search_path: Path) -> Path | None:
     Iterate up the parents of the supplied search path to find the first folder
     containing a ``.sa`` folder with required files inside.
     """
+    search_path = search_path.absolute()
     while search_path:
-        metadata_path = search_path / REPO_DOMAIN
+        metadata_path = search_path / CA_DOMAIN
         if metadata_path.is_dir():
             if (metadata_path / CONFIG_FILE).is_file():
                 return search_path
             _LOGGER.warning(
-                "Found invalid repo domain %s; missing required config file",
-                REPO_DOMAIN,
+                "Found invalid repo domain %s; missing required config file", CA_DOMAIN
             )
             _LOGGER.debug("Missing config file %s", metadata_path / CONFIG_FILE)
 
-        search_path = search_path.parent
+        search_path = search_path.parent if len(search_path.parents) else None
 
     return None
 
@@ -78,9 +78,10 @@ class FileSystemStorage(BytesIOStorage):
         file_path = self._file_path(domain, file_name, parents=True)
 
         if backup and file_path.exists():
-            backup_file_path = file_path.with_suffix(f"{arrow.utcnow().int_timestamp}")
-            file_path.replace(backup_file_path)
-            _LOGGER.info("Backup file written to %s", backup_file_path)
+            backup_file_path = file_path.rename(
+                file_path.parent / f"{file_path.name}.{arrow.utcnow().int_timestamp}"
+            )
+            _LOGGER.info("Backup file written to %s", backup_file_path.name)
 
         async with async_open(file_path, mode="wb") as fp:
             return await fp.write(data)

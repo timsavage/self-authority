@@ -1,6 +1,7 @@
 """ABC for storage services."""
 import abc
-from typing import Mapping
+import json
+from typing import Mapping, Any
 
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -17,6 +18,7 @@ from sa.consts import (
     TEXT_ENCODING,
     SIGNING_REQUEST_FILE,
     CERTIFICATE_FILE,
+    CONFIG_FILE,
 )
 
 
@@ -44,14 +46,14 @@ class Storage:
         """
 
     @abc.abstractmethod
-    async def read_config(self, domain: str) -> Mapping[str, ...]:
+    async def read_config(self, domain: str) -> Mapping[str, Any]:
         """Read configuration from storage.
 
         :param domain: Domain to read config from.
         """
 
     @abc.abstractmethod
-    async def write_config(self, domain: str, config: Mapping[str, ...]) -> None:
+    async def write_config(self, domain: str, config: Mapping[str, Any]) -> None:
         """Write configuration to storage.
 
         :param domain: Domain to write config to.
@@ -147,18 +149,22 @@ class BytesIOStorage(Storage):
     ) -> int:
         """Write bytes to storage layer"""
 
-    async def read_config(self, domain: str) -> Mapping[str, ...]:
+    async def read_config(self, domain: str) -> Mapping[str, Any]:
         """Read configuration from storage.
 
         :param domain: Domain to read config from.
         """
+        data = await self._read_bytes(domain, CONFIG_FILE)
+        return json.loads(data.decode(TEXT_ENCODING))
 
-    async def write_config(self, domain: str, config: Mapping[str, ...]) -> None:
+    async def write_config(self, domain: str, config: Mapping[str, Any]) -> None:
         """Write configuration to storage.
 
         :param domain: Domain to write config to.
         :param config: Configuration key/value pairs.
         """
+        data = json.dumps(config, indent=2).encode(TEXT_ENCODING)
+        await self._write_bytes(domain, CONFIG_FILE, data)
 
     async def read_private_key(
         self,
