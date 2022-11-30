@@ -40,6 +40,10 @@ Requirements
 
   - Display summary of certificate
 
+  - List all domains with summary info
+
+  - Bulk renew of all expired certificates
+
 - Common behaviours
 
   - Save history of certificates
